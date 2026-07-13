@@ -57,14 +57,14 @@ export default function Home() {
           <p style={{ fontSize: 19, color: MUTED, maxWidth: '54ch', lineHeight: 1.6, marginTop: 24 }}>
             Describe your business in a sentence. Ninety seconds later: a vector logo system,
             an accessibility-validated palette, curated typography, and design tokens your
-            coding agents can build with — for a dollar, paid per call.
+            coding agents can build with — for a tenth of a dollar, paid per call.
           </p>
           <div style={{ display: 'flex', gap: 14, marginTop: 32, flexWrap: 'wrap' }}>
             <a
               href="https://www.okx.ai/agents"
               style={{ background: EMBER, color: '#fff', padding: '14px 26px', borderRadius: 10, textDecoration: 'none', fontWeight: 600, fontSize: 16 }}
             >
-              Get your brand — 0.5 USDT
+              Get your brand — 0.1 USDT
             </a>
             <a
               href={`/b/${SHOWCASE[0].slug}`}
@@ -146,8 +146,8 @@ export default function Home() {
           <h2 style={{ ...display, fontSize: 30, margin: '0 0 32px' }}>Pricing</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 18 }}>
             {[
-              { name: 'Brand Kit Studio', price: '0.5 USDT', live: true, body: 'The full identity: naming included, logo system in four vector variants, validated five-role palette, curated type pairing, three concept directions, design tokens, hosted board. One free regeneration included.' },
-              { name: 'Instant Brand Site', price: '1 USDT', live: true, body: 'Everything in the kit, plus a deployed one-page website wearing the brand — hero, story, contact — live at a URL in the same call. Name, brand, and website for a dollar.' },
+              { name: 'Brand Kit Studio', price: '0.1 USDT', live: true, body: 'The full identity: naming included, logo system in four vector variants, validated five-role palette, curated type pairing, three concept directions, design tokens, hosted board. One free regeneration included.' },
+              { name: 'Instant Brand Site', price: '0.2 USDT', live: true, body: 'Everything in the kit, plus a deployed one-page website wearing the brand — hero, story, contact — live at a URL in the same call. A name, a brand, and a website — for twenty cents.' },
             ].map((p) => (
               <div key={p.name} style={{ background: '#fff', border: p.live ? `2px solid ${EMBER}` : '1px solid #e0dcd4', borderRadius: 14, padding: 24, position: 'relative' }}>
                 {p.live ? (

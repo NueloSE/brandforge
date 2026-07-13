@@ -42,11 +42,11 @@ export function priceMinimal(usdtStr: string): string {
 export const SERVICES = {
   kit: {
     name: 'BrandForge Brand Kit Studio',
-    price: () => priceMinimal(process.env.KIT_PRICE_USDT ?? '0.5'),
+    price: () => priceMinimal(process.env.KIT_PRICE_USDT ?? '0.1'),
   },
   launch: {
     name: 'BrandForge Instant Brand Site',
-    price: () => priceMinimal(process.env.LAUNCH_PRICE_USDT ?? '1'),
+    price: () => priceMinimal(process.env.LAUNCH_PRICE_USDT ?? '0.2'),
   },
 } as const;
 export type ServiceId = keyof typeof SERVICES;
