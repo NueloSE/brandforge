@@ -41,7 +41,10 @@ specific material, place, or object from THIS business's world. If the brief is 
 a plausible specific world for it first (its city, its craft, its customers' desks) and
 ground there.
 
-NAMING — when inventing a name, it must be ownable and surprising. HARD RULES:
+NAMING — applies ONLY when the brief does NOT supply a name. If the brief gives a name
+(e.g. "X — a bakery..." or "the name is X"), keep it VERBATIM, set nameWasGiven=true, and
+skip every rule below — a client's existing name is never questioned or changed.
+When inventing a name, it must be ownable and surprising. HARD RULES:
 1. NEVER a word that describes the product's function or an agent-noun of it (a monitoring
    tool must not be Watcher/Monitor/Vigil/Lookout/Guard/Tracker/Scout/Sentry; a bakery must
    not be Baker/Oven). Function words are what EVERY lazy generator produces.

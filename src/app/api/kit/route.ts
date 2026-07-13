@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
       if (!verdict.ok) {
         return NextResponse.json({ error: `Payment invalid: ${verdict.reason}` }, { status: 402 });
       }
-      const settled = await settlePayment(payment);
+      const settled = await settlePayment(sigHeader);
       if (settled.status === 'failed') {
         console.error('settlement failed', settled.detail);
         return NextResponse.json(

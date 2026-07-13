@@ -192,31 +192,52 @@ function okxAuthHeaders(method: string, requestPath: string, body: string): Reco
  * Ask the facilitator to execute proxy.settle -> permitWitnessTransferFrom.
  * Funds can only move to the witness.to baked into the buyer's signature,
  * so this call cannot redirect payment even if the request were tampered with.
+ *
+ * Body shape (confirmed against the live facilitator): the decoded
+ * PAYMENT-SIGNATURE header as `paymentPayload` (it carries x402Version,
+ * accepted, payload{signature, permit2Authorization}), plus the buyer's
+ * `accepted` entry as `paymentRequirements`.
  */
-export async function settlePayment(p: ParsedPayment): Promise<SettleResult> {
+export async function settlePayment(rawPaymentHeader: string): Promise<SettleResult> {
   const host = process.env.OKX_API_HOST ?? 'https://web3.okx.com';
   const path = process.env.FACILITATOR_SETTLE_PATH ?? '/api/v6/pay/x402/settle';
+
+  let decoded: Record<string, unknown>;
+  try {
+    decoded = JSON.parse(Buffer.from(rawPaymentHeader, 'base64').toString('utf-8'));
+  } catch {
+    return { status: 'failed', detail: 'payment header is not base64 JSON' };
+  }
   const body = JSON.stringify({
-    x402Version: 2,
-    scheme: 'exact',
-    network: XLAYER_CAIP2,
-    payload: { signature: p.signature, permit2Authorization: p.authorization },
+    paymentPayload: decoded,
+    paymentRequirements: decoded.accepted ?? null,
   });
+
   try {
     const res = await fetch(`${host}${path}`, {
       method: 'POST',
       headers: okxAuthHeaders('POST', path, body),
       body,
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(60_000),
     });
     const text = await res.text();
-    if (!res.ok) return { status: 'failed', detail: `facilitator ${res.status}: ${text.slice(0, 300)}` };
+    if (!res.ok) return { status: 'failed', detail: `facilitator HTTP ${res.status}: ${text.slice(0, 300)}` };
+
     let json: Record<string, unknown> = {};
-    try { json = JSON.parse(text); } catch { /* non-JSON success body */ }
-    const data = (json.data ?? json) as Record<string, unknown>;
-    const tx = (data.transaction ?? data.txHash ?? data.tx_hash) as string | undefined;
-    const status = (data.status as string) === 'pending' ? 'pending' : 'settled';
-    return { status, transaction: tx };
+    try { json = JSON.parse(text); } catch {
+      return { status: 'failed', detail: `facilitator returned non-JSON: ${text.slice(0, 200)}` };
+    }
+    const data = (json.data ?? {}) as Record<string, unknown>;
+    // strict: only `success: true` counts as money moved
+    if (data.success === true) {
+      const tx = (data.transaction ?? '') as string;
+      const status = (data.status as string) === 'pending' ? 'pending' : 'settled';
+      return { status, transaction: tx };
+    }
+    return {
+      status: 'failed',
+      detail: `${data.errorReason ?? 'unknown'}: ${data.errorMessage ?? JSON.stringify(json).slice(0, 200)}`,
+    };
   } catch (e) {
     return { status: 'failed', detail: (e as Error).message };
   }
