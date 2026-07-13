@@ -44,8 +44,11 @@ export default async function SitePage({ params }: PageProps) {
   const fonts = `https://fonts.googleapis.com/css2?family=${c.pairing.display.gf}&family=${c.pairing.body.gf}&display=swap`;
   const display = { fontFamily: `${c.pairing.display.family}, Georgia, serif`, fontWeight: c.pairing.wordmark.weight } as const;
 
+  const favicon = `data:image/svg+xml;utf8,${encodeURIComponent(logos.mark)}`;
+
   return (
     <>
+      <link rel="icon" href={favicon} />
       <link rel="stylesheet" href={fonts} />
       <div style={{ background: p.ground, color: p.ink, fontFamily: `${c.pairing.body.family}, system-ui, sans-serif`, minHeight: '100vh' }}>
         <div style={{ maxWidth: 980, margin: '0 auto', padding: '0 24px' }}>

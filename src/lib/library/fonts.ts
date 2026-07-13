@@ -99,6 +99,22 @@ export const FONT_PAIRINGS: FontPairing[] = [
     wordmark: { case: 'normal', tracking: '0.01em', weight: 400 },
     notes: 'Didone-flavored display + soft geometric body. Beauty, interiors, studios.',
   },
+  {
+    id: 'bitter-rubik',
+    display: { family: 'Bitter', weights: [600], gf: 'Bitter:wght@600' },
+    body: { family: 'Rubik', weights: [400, 500], gf: 'Rubik:wght@400;500' },
+    traits: ['crafted', 'rooted', 'friendly', 'warm'],
+    wordmark: { case: 'normal', tracking: '0em', weight: 600 },
+    notes: 'Sturdy slab + rounded humanist. Workshops, food, trades, family businesses.',
+  },
+  {
+    id: 'newsreader-worksans',
+    display: { family: 'Newsreader', weights: [600], gf: 'Newsreader:opsz,wght@6..72,600' },
+    body: { family: 'Work Sans', weights: [400, 500], gf: 'Work+Sans:wght@400;500' },
+    traits: ['editorial', 'elegant', 'warm', 'serious'],
+    wordmark: { case: 'normal', tracking: '-0.01em', weight: 600 },
+    notes: 'Literary optical serif + quiet sans. Journals, studios, heritage-modern services.',
+  },
 ];
 
 export function pairingById(id: string): FontPairing {

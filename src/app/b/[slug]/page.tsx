@@ -52,8 +52,11 @@ export default async function BoardPage({ params }: PageProps) {
   const displayFamily = featured.pairing.display.family;
   const bodyFamily = featured.pairing.body.family;
 
+  const favicon = `data:image/svg+xml;utf8,${encodeURIComponent(logos.mark)}`;
+
   return (
     <>
+      <link rel="icon" href={favicon} />
       <link rel="stylesheet" href={googleFontsHref(concepts)} />
       <div
         style={{

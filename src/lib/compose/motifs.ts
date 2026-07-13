@@ -135,6 +135,43 @@ ${dots}`;
 <rect x="26" y="60" width="22" height="7" rx="3.5" fill="${primary}"/>
 <circle cx="64" cy="63.5" r="5" fill="${accent}"/>`,
   },
+  {
+    id: 'aperture',
+    traits: ['technical', 'crafted', 'geometric', 'minimal'],
+    notes: 'Camera iris of six blades. Optics, precision craft, focus.',
+    draw: ({ primary, accent }) => {
+      const pts = Array.from({ length: 6 }, (_, i) => {
+        const a = ((i * 60 - 90) * Math.PI) / 180;
+        return [48 + 30 * Math.cos(a), 48 + 30 * Math.sin(a)];
+      });
+      const chords = pts
+        .map((p1, i) => {
+          const p2 = pts[(i + 2) % 6];
+          return `<line x1="${p1[0].toFixed(1)}" y1="${p1[1].toFixed(1)}" x2="${p2[0].toFixed(1)}" y2="${p2[1].toFixed(1)}" stroke="${primary}" stroke-width="4.5" stroke-linecap="round"/>`;
+        })
+        .join('');
+      return `<circle cx="48" cy="48" r="34" fill="none" stroke="${primary}" stroke-width="4.5"/>${chords}<circle cx="48" cy="48" r="5" fill="${accent}"/>`;
+    },
+  },
+  {
+    id: 'sprout',
+    traits: ['organic', 'friendly', 'warm', 'rooted'],
+    notes: 'Stem with two leaves. Growth, food, care, freshness.',
+    draw: ({ primary, accent }) => `
+<path d="M48,74 C48,58 48,46 48,34" fill="none" stroke="${primary}" stroke-width="5" stroke-linecap="round"/>
+<path d="M48,52 C38,50 30,42 29,31 C40,32 47,40 48,52 Z" fill="${primary}"/>
+<path d="M48,44 C58,42 66,34 67,23 C56,24 49,32 48,44 Z" fill="${accent}"/>
+<circle cx="48" cy="76" r="3" fill="${primary}"/>`,
+  },
+  {
+    id: 'facet',
+    traits: ['luxurious', 'bold', 'geometric', 'elegant'],
+    notes: 'Cut gem with one lit facet. Jewelry, premium goods, craft.',
+    draw: ({ primary, accent }) => `
+<path d="M30,36 L66,36 L74,48 L48,74 L22,48 Z" fill="none" stroke="${primary}" stroke-width="4.5" stroke-linejoin="round"/>
+<path d="M30,36 L48,48 L66,36" fill="none" stroke="${primary}" stroke-width="3.5" stroke-linejoin="round"/>
+<path d="M22,48 L48,48 L48,74 Z" fill="${accent}" opacity="0.9"/>`,
+  },
 ];
 
 export function motifById(id: string): Motif {

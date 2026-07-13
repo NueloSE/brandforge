@@ -24,8 +24,13 @@ export interface ConceptSet {
 }
 
 export async function buildConcepts(brief: ParsedBrief): Promise<ConceptSet> {
-  const pairings = pairingsByTraits(brief.traits, 3);
-  const motifs = motifsByTraits(brief.traits, 3);
+  // Draw from a wider trait-matched pool and shuffle it with a per-brand seed:
+  // equally-fitting directions rotate across brands instead of every warm/crafted
+  // business getting the identical top pairing + motif (template feel). Same
+  // name -> same shuffle, so results stay deterministic per brand.
+  const brandSeed = hashSeed(brief.businessName) + brief.businessName.length * 31;
+  const pairings = seededPick(pairingsByTraits(brief.traits, 6), 3, brandSeed);
+  const motifs = seededPick(motifsByTraits(brief.traits, 6), 3, brandSeed ^ 0x9e37);
 
   const raw: Omit<Concept, 'critique'>[] = [0, 1, 2].map((i) => ({
     label: (['A', 'B', 'C'] as const)[i],
@@ -87,6 +92,17 @@ ${summary}`;
 
 function clampIndex(i: number, len: number): number {
   return Number.isInteger(i) && i >= 0 && i < len ? i : 0;
+}
+
+function seededPick<T>(pool: T[], n: number, seed: number): T[] {
+  const arr = [...pool];
+  let st = (seed >>> 0) || 1;
+  for (let i = arr.length - 1; i > 0; i--) {
+    st = (st * 1664525 + 1013904223) >>> 0;
+    const j = st % (i + 1);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr.slice(0, n);
 }
 
 function hashSeed(s: string): number {
