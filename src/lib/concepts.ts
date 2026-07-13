@@ -63,6 +63,9 @@ async function judgeConcepts(
 
   const system = `You are a brand design judge. Given a brief and 3 candidate directions (font pairing +
 mark motif), score them on trait fit, distinctiveness, and coherence with the brief's world.
+ANTI-CLICHE RULE: actively penalize the most-expected choice for this industry (geometric
+sans + orbit/ledger for dev tools, serif + thread for luxury, etc.). Feature the direction a
+thoughtful human designer would pick to STAND OUT in this industry while staying credible.
 Reply with ONLY a JSON object: { "featuredIndex": 0|1|2, "notes": [3 strings] } — each note is
 one short punchy sentence (<=12 words) explaining that concept's character, written for the
 brand owner, not a designer. No prose outside the JSON.`;

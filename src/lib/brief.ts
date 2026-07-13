@@ -34,6 +34,26 @@ GROUNDED in something specific from the brief's own world (a place, material, tr
 food, craft, or culture the business actually belongs to). Be concrete and specific, not
 generic. Reply with ONLY a single JSON object, no prose, no markdown fences.
 
+CLICHE BAN — the industry's default palette is FORBIDDEN. Never: terminal/neon green for
+developer tools; generic blue for fintech or SaaS; teal for health; purple gradients for AI;
+red-yellow for food chains. Find the color a lazy designer would miss: ground it in a
+specific material, place, or object from THIS business's world. If the brief is thin, invent
+a plausible specific world for it first (its city, its craft, its customers' desks) and
+ground there.
+
+NAMING — when inventing a name, it must be ownable and surprising. HARD RULES:
+1. NEVER a word that describes the product's function or an agent-noun of it (a monitoring
+   tool must not be Watcher/Monitor/Vigil/Lookout/Guard/Tracker/Scout/Sentry; a bakery must
+   not be Baker/Oven). Function words are what EVERY lazy generator produces.
+2. NEVER these overused tokens: Sentinel, Nexus, Pulse, Apex, Vertex, Zenith, Vigil, Beacon,
+   Forge, Atlas, Echo, Nova, Orbit, Prism, Flux, Shift, Spark.
+3. DO name sideways: a concrete object/place/figure from an adjacent world that carries the
+   right FEELING (like "Slack", "Stripe", "Notion", "Linear" — none describe their function),
+   a coined portmanteau, or a resonant non-English word with real meaning here.
+4. Each of the 3 names (main + 2 alternates) must use a DIFFERENT strategy from rule 3.
+Test: if the name tells you what the product does, it fails. If it makes you ask "why is it
+called that?" and the answer is a good story, it wins.
+
 Traits MUST be chosen only from this exact list (pick 3-4, most-defining first):
 ${TRAIT_LIST.join(', ')}
 
