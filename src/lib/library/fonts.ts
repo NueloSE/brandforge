@@ -101,6 +101,12 @@ export const FONT_PAIRINGS: FontPairing[] = [
   },
 ];
 
+export function pairingById(id: string): FontPairing {
+  const p = FONT_PAIRINGS.find((x) => x.id === id);
+  if (!p) throw new Error(`Unknown font pairing: ${id}`);
+  return p;
+}
+
 export function pairingsByTraits(wanted: Trait[], count = 3): FontPairing[] {
   return [...FONT_PAIRINGS]
     .map((p) => ({ p, score: p.traits.filter((t) => wanted.includes(t)).length }))

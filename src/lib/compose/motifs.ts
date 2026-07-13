@@ -137,6 +137,12 @@ ${dots}`;
   },
 ];
 
+export function motifById(id: string): Motif {
+  const m = MOTIFS.find((x) => x.id === id);
+  if (!m) throw new Error(`Unknown motif: ${id}`);
+  return m;
+}
+
 export function motifsByTraits(wanted: Trait[], count = 3): Motif[] {
   return [...MOTIFS]
     .map((m) => ({ m, score: m.traits.filter((t) => wanted.includes(t)).length }))
