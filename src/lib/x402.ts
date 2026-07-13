@@ -10,11 +10,17 @@
 //   authorization), then settle via the OKX facilitator; funds can ONLY go to
 //   the witness.to baked into the signature, so settlement is not trust-bearing.
 
+import { createHmac } from 'crypto';
 import { recoverTypedDataAddress, type Hex } from 'viem';
 
 export const XLAYER_CAIP2 = 'eip155:196';
 export const XLAYER_CHAIN_ID = 196;
-export const USDT_XLAYER = '0x1e4a5963abfd975d8c9021ce480b42188849d41d';
+// USD₮0 — Tether's omnichain USDT and the stablecoin OKX actually pays out on
+// X Layer (an OKX withdrawal lands as this token, and OKX's own payment docs
+// use it for the `exact` scheme). The legacy 0x1e4a…41d USDT contract exists
+// on-chain but is NOT what buyers hold — advertising it would be unpayable.
+export const USDT_XLAYER = '0x779ded0c9e1022225f8e0630b35a9b54be713736';
+export const USDT_SYMBOL = 'USD₮0';
 export const USDT_DECIMALS = 6;
 export const PERMIT2_ADDRESS = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
 export const X402_EXACT_PERMIT2_PROXY = '0x402085c248EeA27D92E8b30b2C58ed07f9E20001';
@@ -53,7 +59,7 @@ export function buildPaymentRequiredHeader(serviceUrl: string, description: stri
         maxAmountRequired: kitPriceMinimal(),
         maxTimeoutSeconds: 300,
         extra: {
-          name: 'Tether USD',
+          name: USDT_SYMBOL,
           decimals: USDT_DECIMALS,
           assetTransferMethod: 'permit2',
         },
@@ -160,23 +166,47 @@ export interface SettleResult {
 }
 
 /**
+ * OKX API auth (AK signing), per OKX's own client:
+ *   prehash = timestamp + METHOD + requestPath + body
+ *   sign    = base64(HMAC-SHA256(secretKey, prehash))
+ */
+function okxAuthHeaders(method: string, requestPath: string, body: string): Record<string, string> {
+  const key = process.env.OKX_API_KEY;
+  const secret = process.env.OKX_SECRET_KEY;
+  const passphrase = process.env.OKX_PASSPHRASE;
+  if (!key || !secret || !passphrase) throw new Error('OKX API credentials are not configured');
+
+  const timestamp = new Date().toISOString().replace(/(\.\d{3})\d*Z$/, '$1Z');
+  const sign = createHmac('sha256', secret).update(`${timestamp}${method}${requestPath}${body}`).digest('base64');
+
+  return {
+    'content-type': 'application/json',
+    'OK-ACCESS-KEY': key,
+    'OK-ACCESS-SIGN': sign,
+    'OK-ACCESS-PASSPHRASE': passphrase,
+    'OK-ACCESS-TIMESTAMP': timestamp,
+  };
+}
+
+/**
  * Ask the facilitator to execute proxy.settle -> permitWitnessTransferFrom.
- * Endpoint + payload shape are configurable (env) until confirmed in
- * integration testing; funds can only move to witness.to regardless.
+ * Funds can only move to the witness.to baked into the buyer's signature,
+ * so this call cannot redirect payment even if the request were tampered with.
  */
 export async function settlePayment(p: ParsedPayment): Promise<SettleResult> {
-  const base = process.env.FACILITATOR_URL ?? 'https://web3.okx.com/api/v6/pay/x402';
-  const body = {
+  const host = process.env.OKX_API_HOST ?? 'https://web3.okx.com';
+  const path = process.env.FACILITATOR_SETTLE_PATH ?? '/api/v6/pay/x402/settle';
+  const body = JSON.stringify({
     x402Version: 2,
     scheme: 'exact',
     network: XLAYER_CAIP2,
     payload: { signature: p.signature, permit2Authorization: p.authorization },
-  };
+  });
   try {
-    const res = await fetch(`${base}/settle`, {
+    const res = await fetch(`${host}${path}`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
+      headers: okxAuthHeaders('POST', path, body),
+      body,
       signal: AbortSignal.timeout(30_000),
     });
     const text = await res.text();
