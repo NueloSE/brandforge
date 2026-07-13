@@ -34,19 +34,30 @@ export function paymentMode(): 'free' | 'x402' {
   return process.env.PAYMENT_MODE === 'x402' ? 'x402' : 'free';
 }
 
-/** price in minimal units (6-decimals USDT), e.g. "1" USDT -> "1000000" */
-export function kitPriceMinimal(): string {
-  const usdt = Number(process.env.KIT_PRICE_USDT ?? '1');
-  return String(Math.round(usdt * 10 ** USDT_DECIMALS));
+/** price in minimal units (6-decimals USDT), e.g. "0.5" USDT -> "500000" */
+export function priceMinimal(usdtStr: string): string {
+  return String(Math.round(Number(usdtStr) * 10 ** USDT_DECIMALS));
 }
+
+export const SERVICES = {
+  kit: {
+    name: 'BrandForge Brand Kit Studio',
+    price: () => priceMinimal(process.env.KIT_PRICE_USDT ?? '0.5'),
+  },
+  launch: {
+    name: 'BrandForge Instant Brand Site',
+    price: () => priceMinimal(process.env.LAUNCH_PRICE_USDT ?? '1'),
+  },
+} as const;
+export type ServiceId = keyof typeof SERVICES;
 
 // ── 402 challenge ──────────────────────────────────────────────────────────
 
-export function buildPaymentRequiredHeader(serviceUrl: string, description: string): string {
+export function buildPaymentRequiredHeader(service: ServiceId, serviceUrl: string, description: string): string {
   const payload = {
     x402Version: 2,
     resource: {
-      name: 'BrandForge Brand Kit Studio',
+      name: SERVICES[service].name,
       description,
       url: serviceUrl,
     },
@@ -56,7 +67,7 @@ export function buildPaymentRequiredHeader(serviceUrl: string, description: stri
         network: XLAYER_CAIP2,
         asset: USDT_XLAYER,
         payTo: payToAddress(),
-        maxAmountRequired: kitPriceMinimal(),
+        maxAmountRequired: SERVICES[service].price(),
         maxTimeoutSeconds: 300,
         extra: {
           name: USDT_SYMBOL,
@@ -122,14 +133,14 @@ export interface VerifyResult {
 }
 
 /** Cryptographically verify the buyer's Permit2 authorization against our terms. */
-export async function verifyPayment(p: ParsedPayment): Promise<VerifyResult> {
+export async function verifyPayment(p: ParsedPayment, priceMin: string): Promise<VerifyResult> {
   const a = p.authorization;
   const eq = (x: string, y: string) => x?.toLowerCase() === y?.toLowerCase();
 
   if (!eq(a.permitted?.token, USDT_XLAYER)) return { ok: false, reason: 'wrong token' };
   if (!eq(a.spender, X402_EXACT_PERMIT2_PROXY)) return { ok: false, reason: 'wrong spender' };
   if (!eq(a.witness?.to, payToAddress())) return { ok: false, reason: 'wrong payTo' };
-  if (BigInt(a.permitted.amount) < BigInt(kitPriceMinimal())) return { ok: false, reason: 'amount below price' };
+  if (BigInt(a.permitted.amount) < BigInt(priceMin)) return { ok: false, reason: 'amount below price' };
 
   const now = Math.floor(Date.now() / 1000);
   if (Number(a.deadline) < now) return { ok: false, reason: 'authorization expired' };

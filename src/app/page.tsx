@@ -64,7 +64,7 @@ export default function Home() {
               href="https://www.okx.ai/agents"
               style={{ background: EMBER, color: '#fff', padding: '14px 26px', borderRadius: 10, textDecoration: 'none', fontWeight: 600, fontSize: 16 }}
             >
-              Get your brand — 1 USDT
+              Get your brand — 0.5 USDT
             </a>
             <a
               href={`/b/${SHOWCASE[0].slug}`}
@@ -144,11 +144,10 @@ export default function Home() {
         {/* pricing */}
         <section id="pricing" style={{ padding: '56px 0', borderTop: '1px solid #e0dcd4' }}>
           <h2 style={{ ...display, fontSize: 30, margin: '0 0 32px' }}>Pricing</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 18 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 18 }}>
             {[
-              { name: 'Brand Kit Studio', price: '1 USDT', live: true, body: 'The full identity: logo system in four vector variants, validated five-role palette, curated type pairing, three concept directions, design tokens, hosted board. One free regeneration included.' },
-              { name: 'Brand Name Studio', price: '0.3 USDT', live: false, body: 'Eight to ten ownable name candidates with rationale, tagline options, and live domain availability checks.' },
-              { name: 'Instant Brand Site', price: '2 USDT', live: false, body: 'Everything in the kit, plus a deployed one-page site wearing the brand — hero, story, contact — live at a URL in the same call.' },
+              { name: 'Brand Kit Studio', price: '0.5 USDT', live: true, body: 'The full identity: naming included, logo system in four vector variants, validated five-role palette, curated type pairing, three concept directions, design tokens, hosted board. One free regeneration included.' },
+              { name: 'Instant Brand Site', price: '1 USDT', live: true, body: 'Everything in the kit, plus a deployed one-page website wearing the brand — hero, story, contact — live at a URL in the same call. Name, brand, and website for a dollar.' },
             ].map((p) => (
               <div key={p.name} style={{ background: '#fff', border: p.live ? `2px solid ${EMBER}` : '1px solid #e0dcd4', borderRadius: 14, padding: 24, position: 'relative' }}>
                 {p.live ? (
