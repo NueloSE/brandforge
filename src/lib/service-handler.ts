@@ -8,6 +8,7 @@ import { buildConcepts } from './concepts';
 import { generateSiteCopy } from './site-copy';
 import { encodeBoard } from './encode';
 import { issueRerollToken, isValidRerollToken } from './reroll';
+import { publicOrigin } from './origin';
 import {
   paymentMode, buildPaymentRequiredHeader, parsePaymentHeader, verifyPayment,
   settlePayment, buildPaymentResponseHeader, SERVICES, type ServiceId,
@@ -19,7 +20,7 @@ const DESCRIPTIONS: Record<ServiceId, string> = {
 };
 
 function paymentRequired(service: ServiceId, req: NextRequest): NextResponse {
-  const header = buildPaymentRequiredHeader(service, `${req.nextUrl.origin}${req.nextUrl.pathname}`, DESCRIPTIONS[service]);
+  const header = buildPaymentRequiredHeader(service, `${publicOrigin(req)}${req.nextUrl.pathname}`, DESCRIPTIONS[service]);
   return new NextResponse(JSON.stringify({ error: 'Payment required' }), {
     status: 402,
     headers: { 'content-type': 'application/json', 'PAYMENT-REQUIRED': header },
@@ -99,7 +100,7 @@ export function makePost(service: ServiceId) {
       const conceptSet = await buildConcepts(brief);
       const site = service === 'launch' ? await generateSiteCopy(brief) : undefined;
       const slug = encodeBoard(conceptSet, site);
-      const origin = req.nextUrl.origin;
+      const origin = publicOrigin(req);
 
       return NextResponse.json(
         {
