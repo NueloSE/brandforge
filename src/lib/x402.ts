@@ -219,9 +219,13 @@ export async function settlePayment(rawPaymentHeader: string): Promise<SettleRes
   } catch {
     return { status: 'failed', detail: 'payment header is not base64 JSON' };
   }
+  // paymentRequirements = the buyer's signed `accepted` entry, plus `amount`.
+  // The facilitator requires `amount` explicitly; without it settlement fails
+  // with param_mismatch and no tokens move on-chain.
+  const accepted = (decoded.accepted ?? {}) as Record<string, unknown>;
   const body = JSON.stringify({
     paymentPayload: decoded,
-    paymentRequirements: decoded.accepted ?? null,
+    paymentRequirements: { ...accepted, amount: accepted.maxAmountRequired },
   });
 
   try {
