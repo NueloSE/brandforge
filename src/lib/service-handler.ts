@@ -72,7 +72,12 @@ export function makePost(service: ServiceId) {
     // ── payment gate ────────────────────────────────────────────────────
     let paymentResponseHeader: string | undefined;
     if (paymentMode() === 'x402' && !isFreeReroll) {
-      const sigHeader = req.headers.get('PAYMENT-SIGNATURE');
+      // x402 v2 uses PAYMENT-SIGNATURE; v1 clients (and some buyer tools) send
+      // X-PAYMENT. Accept either so no buyer is turned away over a header name.
+      const sigHeader =
+        req.headers.get('PAYMENT-SIGNATURE') ??
+        req.headers.get('X-PAYMENT') ??
+        req.headers.get('x-payment');
       if (!sigHeader) return paymentRequired(service, req);
       try {
         const payment = parsePaymentHeader(sigHeader);
@@ -96,9 +101,22 @@ export function makePost(service: ServiceId) {
 
     try {
       const fullBrief = style ? `${raw}\nClient style preferences (must honor): ${style}` : raw;
-      const brief = await parseBrief(fullBrief);
-      const conceptSet = await buildConcepts(brief);
-      const site = service === 'launch' ? await generateSiteCopy(brief) : undefined;
+      // The buyer has already been charged by this point — a transient model
+      // hiccup must not cost them their deliverable, so retry once.
+      const generate = async () => {
+        const brief = await parseBrief(fullBrief);
+        const conceptSet = await buildConcepts(brief);
+        const site = service === 'launch' ? await generateSiteCopy(brief) : undefined;
+        return { brief, conceptSet, site };
+      };
+      let generated;
+      try {
+        generated = await generate();
+      } catch (first) {
+        console.error(`${service} generation attempt 1 failed, retrying`, first);
+        generated = await generate();
+      }
+      const { brief, conceptSet, site } = generated;
       const slug = encodeBoard(conceptSet, site);
       const origin = publicOrigin(req);
 
