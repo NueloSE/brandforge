@@ -9,6 +9,7 @@ import { generateSiteCopy } from './site-copy';
 import { encodeBoard } from './encode';
 import { issueRerollToken, isValidRerollToken } from './reroll';
 import { publicOrigin } from './origin';
+import { isReplay, markFulfilled } from './replay-guard';
 import {
   paymentMode, buildPaymentRequiredHeader, parsePaymentHeader, verifyPayment,
   settlePayment, buildPaymentResponseHeader, SERVICES, type ServiceId,
@@ -85,6 +86,16 @@ export function makePost(service: ServiceId) {
         if (!verdict.ok) {
           return NextResponse.json({ error: `Payment invalid: ${verdict.reason}` }, { status: 402 });
         }
+        // Reject a replayed authorization before doing any paid work. The nonce
+        // is single-use on-chain (no double charge), so this only blocks free
+        // repeat generations from re-sending the same signed payment.
+        const nonce = payment.authorization.nonce;
+        if (isReplay(nonce)) {
+          return NextResponse.json(
+            { error: 'This payment authorization was already used. Start a new payment for another brand.' },
+            { status: 402 },
+          );
+        }
         const settled = await settlePayment(sigHeader);
         if (settled.status === 'failed') {
           console.error('settlement failed', settled.detail);
@@ -93,6 +104,7 @@ export function makePost(service: ServiceId) {
             { status: 502 },
           );
         }
+        markFulfilled(nonce);
         paymentResponseHeader = buildPaymentResponseHeader(settled, verdict.payer!, SERVICES[service].price());
       } catch (e) {
         return NextResponse.json({ error: `Payment header unreadable: ${(e as Error).message}` }, { status: 402 });
