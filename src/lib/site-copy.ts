@@ -31,10 +31,24 @@ Tagline: ${brief.tagline}
 Audience: ${brief.audience}
 Traits: ${brief.traits.join(', ')}
 World: ${brief.world.rationale}`;
-  const copy = await askJson<SiteCopy>(SYSTEM, user, 900);
-  copy.sections = (copy.sections ?? []).slice(0, 3);
-  while (copy.sections.length < 3) {
-    copy.sections.push({ title: brief.tagline, body: brief.audience });
+  try {
+    const copy = await askJson<SiteCopy>(SYSTEM, user, 900);
+    copy.sections = (copy.sections ?? []).slice(0, 3);
+    while (copy.sections.length < 3) copy.sections.push({ title: brief.tagline, body: brief.audience });
+    return copy;
+  } catch (e) {
+    // Buyer already paid — deliver a coherent site rather than hang or fail.
+    console.error('site copy LLM failed, using fallback:', (e as Error).message);
+    return {
+      headline: brief.tagline,
+      subhead: brief.audience,
+      cta: 'Get in touch',
+      sections: [
+        { title: 'What we do', body: brief.audience },
+        { title: 'Our approach', body: `${brief.traits.join(', ')} — in everything we make.` },
+        { title: 'Get started', body: `Reach out and let’s talk about working together.` },
+      ],
+      footerLine: brief.tagline,
+    };
   }
-  return copy;
 }

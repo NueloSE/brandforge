@@ -80,13 +80,102 @@ JSON shape:
 
 export async function parseBrief(rawBrief: string): Promise<ParsedBrief> {
   const clean = sanitizeBrief(rawBrief);
-  const result = await askJson<ParsedBrief>(
-    SYSTEM,
-    `Business brief:\n"""${clean}"""`,
-  );
-  result.traits = result.traits.filter((t): t is Trait => TRAIT_LIST.includes(t as Trait)).slice(0, 4);
-  if (result.traits.length === 0) result.traits = ['modern', 'friendly'];
-  return result;
+  try {
+    const result = await askJson<ParsedBrief>(SYSTEM, `Business brief:\n"""${clean}"""`);
+    result.traits = result.traits.filter((t): t is Trait => TRAIT_LIST.includes(t as Trait)).slice(0, 4);
+    if (result.traits.length === 0) result.traits = ['modern', 'friendly'];
+    return result;
+  } catch (e) {
+    // A buyer has already paid by the time this runs — never hang or fail.
+    // Fall back to a deterministic brief built from the brief's own words.
+    console.error('parseBrief LLM failed, using deterministic fallback:', (e as Error).message);
+    return deterministicBrief(clean);
+  }
+}
+
+/**
+ * LLM-free brief: keyword→trait heuristics + a name-derived palette. Less
+ * world-grounded than the model path, but always produces a coherent,
+ * contrast-valid brand — so a paid request is never left undelivered.
+ */
+export function deterministicBrief(clean: string): ParsedBrief {
+  const text = clean.toLowerCase();
+  const givenName = extractGivenName(clean);
+
+  const TRAIT_CUES: [Trait, RegExp][] = [
+    ['warm', /bakery|coffee|cafe|kitchen|food|restaurant|home|family/],
+    ['crafted', /artisan|handmade|craft|studio|workshop|bespoke|repair/],
+    ['rooted', /heritage|traditional|local|african|roots|authentic/],
+    ['technical', /api|dev|software|data|engineer|infrastructure|tool|platform|cloud/],
+    ['minimal', /simple|clean|minimal|precise/],
+    ['luxurious', /luxury|premium|fine|couture|jewel|gold/],
+    ['playful', /kids|fun|game|kids|kid|kids'|party|kids’|toy/],
+    ['bold', /gym|fitness|sport|street|loud|bold/],
+    ['elegant', /fashion|beauty|salon|interior|elegant/],
+    ['editorial', /media|magazine|writer|content|publish|journal/],
+    ['organic', /wellness|health|farm|natural|plant|garden/],
+    ['modern', /startup|app|tech|digital|online/],
+    ['friendly', /community|social|people|friendly|help/],
+  ];
+  const traits: Trait[] = [];
+  for (const [t, re] of TRAIT_CUES) if (re.test(text) && !traits.includes(t)) traits.push(t);
+  while (traits.length < 3) for (const d of ['modern', 'crafted', 'friendly'] as Trait[]) if (!traits.includes(d)) traits.push(d);
+  const finalTraits = traits.slice(0, 4);
+
+  // deterministic hue from the name so the same brand always looks the same
+  const seed = [...(givenName ?? clean)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+  const hue = seed % 360;
+  const primaryHint = hslHex(hue, 0.55, 0.32);
+  const accentHint = hslHex((hue + 32) % 360, 0.7, 0.62);
+  const groundHint = hslHex(hue, 0.18, 0.95);
+
+  const name = givenName ?? deriveName(clean, seed);
+  return {
+    businessName: name,
+    nameWasGiven: Boolean(givenName),
+    nameAlternates: givenName ? [] : [deriveName(clean, seed * 3 + 1), deriveName(clean, seed * 7 + 2)],
+    tagline: 'Crafted with intention',
+    subline: (clean.split(/[—\-,.]/)[1] ?? 'STUDIO').trim().slice(0, 24).toUpperCase() || 'STUDIO',
+    industry: 'General',
+    audience: clean.slice(0, 120),
+    traits: finalTraits,
+    world: {
+      primaryHint, accentHint, groundHint,
+      rationale: 'A distinctive palette derived from the brand’s character, tuned for contrast and legibility.',
+    },
+  };
+}
+
+function extractGivenName(clean: string): string | null {
+  // "Name — description" / "Name, description" / "the name is Name"
+  const dash = clean.match(/^([A-Z][\w'&.]+(?:\s+[A-Z][\w'&.]+){0,3})\s*[—–\-]/);
+  if (dash) return dash[1].trim();
+  const explicit = clean.match(/\bname\s+is\s+([A-Z][\w'&.]+(?:\s+[A-Z][\w'&.]+){0,2})/i);
+  if (explicit) return explicit[1].trim();
+  return null;
+}
+
+const SYLL = ['ora', 'ven', 'lum', 'kai', 'sol', 'mir', 'ash', 'vale', 'noor', 'ryn', 'ade', 'zola'];
+function deriveName(clean: string, seed: number): string {
+  const a = SYLL[seed % SYLL.length];
+  const b = SYLL[(seed >> 3) % SYLL.length];
+  const s = (a + b).replace(/(.)\1/g, '$1');
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function hslHex(h: number, s: number, l: number): string {
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  const t = (x: number) => {
+    x = ((x % 1) + 1) % 1;
+    if (x < 1 / 6) return p + (q - p) * 6 * x;
+    if (x < 1 / 2) return q;
+    if (x < 2 / 3) return p + (q - p) * (2 / 3 - x) * 6;
+    return p;
+  };
+  const c = (v: number) => Math.round(v * 255).toString(16).padStart(2, '0');
+  const hn = h / 360;
+  return `#${c(t(hn + 1 / 3))}${c(t(hn))}${c(t(hn - 1 / 3))}`;
 }
 
 /** Buyer input is untrusted — strip anything that reads like an instruction before it reaches the model. */

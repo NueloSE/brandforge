@@ -101,22 +101,15 @@ export function makePost(service: ServiceId) {
 
     try {
       const fullBrief = style ? `${raw}\nClient style preferences (must honor): ${style}` : raw;
-      // The buyer has already been charged by this point — a transient model
-      // hiccup must not cost them their deliverable, so retry once.
-      const generate = async () => {
-        const brief = await parseBrief(fullBrief);
-        const conceptSet = await buildConcepts(brief);
-        const site = service === 'launch' ? await generateSiteCopy(brief) : undefined;
-        return { brief, conceptSet, site };
-      };
-      let generated;
-      try {
-        generated = await generate();
-      } catch (first) {
-        console.error(`${service} generation attempt 1 failed, retrying`, first);
-        generated = await generate();
-      }
-      const { brief, conceptSet, site } = generated;
+      // Each model step is bounded (SDK timeout) and self-heals to a
+      // deterministic fallback, so generation always completes quickly and a
+      // paid buyer is never left without a deliverable. No compounding retry.
+      const brief = await parseBrief(fullBrief);
+      // concepts and site copy both depend only on `brief` — run them together.
+      const [conceptSet, site] = await Promise.all([
+        buildConcepts(brief),
+        service === 'launch' ? generateSiteCopy(brief) : Promise.resolve(undefined),
+      ]);
       const slug = encodeBoard(conceptSet, site);
       const origin = publicOrigin(req);
 
