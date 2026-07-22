@@ -16,12 +16,17 @@ function redis(): Redis | null {
   if (!url) return null;
   try {
     client = new Redis(url, {
+      // Railway's private network (*.railway.internal) resolves over IPv6 only;
+      // family:0 lets Node use whichever family DNS returns. Without it ioredis
+      // silently never connects and every shorten() falls back to the long slug.
+      family: 0,
       lazyConnect: false,
       maxRetriesPerRequest: 2,
-      enableOfflineQueue: false,
-      connectTimeout: 3000,
+      enableOfflineQueue: true,
+      connectTimeout: 5000,
     });
-    client.on('error', () => { /* swallow — callers fall back to the long slug */ });
+    client.on('error', (e) => { console.error('[redis] error:', (e as Error).message); });
+    client.on('connect', () => { console.error('[redis] connected'); });
   } catch {
     client = null;
   }
