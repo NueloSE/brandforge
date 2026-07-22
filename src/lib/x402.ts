@@ -63,17 +63,19 @@ export function buildPaymentRequiredHeader(service: ServiceId, serviceUrl: strin
     },
     accepts: [
       {
+        // EIP-3009 exact scheme. `extra` is EXACTLY the token's on-chain EIP-712
+        // domain {name, version} — buyers build their transferWithAuthorization
+        // signature from these, so any mismatch reverts at settlement. No
+        // assetTransferMethod: per the x402 spec the buyer then prefers EIP-3009
+        // for a 3009-capable token (USD₮0 is). We self-settle it on-chain.
         scheme: 'exact',
         network: XLAYER_CAIP2,
         asset: USDT_XLAYER,
         payTo: payToAddress(),
+        amount: SERVICES[service].price(),
         maxAmountRequired: SERVICES[service].price(),
         maxTimeoutSeconds: 300,
-        extra: {
-          name: USDT_SYMBOL,
-          decimals: USDT_DECIMALS,
-          assetTransferMethod: 'permit2',
-        },
+        extra: { name: USDT_SYMBOL, version: '1' },
       },
     ],
   };

@@ -10,6 +10,7 @@ import { encodeBoard } from './encode';
 import { issueRerollToken, isValidRerollToken } from './reroll';
 import { publicOrigin } from './origin';
 import { isReplay, markFulfilled } from './replay-guard';
+import { parseEip3009, settleEip3009 } from './eip3009';
 import {
   paymentMode, buildPaymentRequiredHeader, parsePaymentHeader, verifyPayment,
   settlePayment, buildPaymentResponseHeader, SERVICES, type ServiceId,
@@ -81,22 +82,39 @@ export function makePost(service: ServiceId) {
         req.headers.get('x-payment');
       if (!sigHeader) return paymentRequired(service, req);
       try {
-        const payment = parsePaymentHeader(sigHeader);
-        const verdict = await verifyPayment(payment, SERVICES[service].price());
-        if (!verdict.ok) {
-          return NextResponse.json({ error: `Payment invalid: ${verdict.reason}` }, { status: 402 });
+        const priceMin = BigInt(SERVICES[service].price());
+        // Detect the scheme by payload shape: EIP-3009 (authorization) — what
+        // task-402-pay and spec buyers send — or Permit2 (permit2Authorization).
+        // Both settle through the OKX facilitator (verified on-chain), so no
+        // operator wallet or gas is needed. Nonce comes from whichever is present.
+        const eip3009 = parseEip3009(sigHeader);
+        const permit2 = eip3009 ? null : parsePaymentHeader(sigHeader);
+        const nonce = eip3009 ? eip3009.authorization.nonce : permit2!.authorization.nonce;
+
+        // Permit2 payloads carry the terms in the signature; verify them locally.
+        // (EIP-3009 terms are enforced by the token contract at settlement.)
+        if (permit2) {
+          const verdict = await verifyPayment(permit2, SERVICES[service].price());
+          if (!verdict.ok) {
+            return NextResponse.json({ error: `Payment invalid: ${verdict.reason}` }, { status: 402 });
+          }
         }
-        // Reject a replayed authorization before doing any paid work. The nonce
-        // is single-use on-chain (no double charge), so this only blocks free
-        // repeat generations from re-sending the same signed payment.
-        const nonce = payment.authorization.nonce;
+
         if (isReplay(nonce)) {
           return NextResponse.json(
             { error: 'This payment authorization was already used. Start a new payment for another brand.' },
             { status: 402 },
           );
         }
-        const settled = await settlePayment(sigHeader);
+
+        let settled = await settlePayment(sigHeader);
+        // Optional resilience: if the facilitator ever rejects an EIP-3009
+        // payload and an operator wallet is funded, self-settle on-chain.
+        if (settled.status === 'failed' && eip3009 && process.env.OPERATOR_PRIVATE_KEY) {
+          console.error('facilitator EIP-3009 settle failed, trying self-settle:', settled.detail);
+          const self = await settleEip3009(eip3009, priceMin);
+          settled = { status: self.status === 'settled' ? 'settled' : 'failed', transaction: self.transaction, detail: self.detail };
+        }
         if (settled.status === 'failed') {
           console.error('settlement failed', settled.detail);
           return NextResponse.json(
@@ -105,7 +123,8 @@ export function makePost(service: ServiceId) {
           );
         }
         markFulfilled(nonce);
-        paymentResponseHeader = buildPaymentResponseHeader(settled, verdict.payer!, SERVICES[service].price());
+        const payer = eip3009 ? eip3009.authorization.from : permit2!.authorization.from;
+        paymentResponseHeader = buildPaymentResponseHeader(settled, payer, SERVICES[service].price());
       } catch (e) {
         return NextResponse.json({ error: `Payment header unreadable: ${(e as Error).message}` }, { status: 402 });
       }
