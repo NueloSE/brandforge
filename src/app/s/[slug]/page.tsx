@@ -2,6 +2,12 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { decodeBoard } from '@/lib/encode';
 import { logoSet } from '@/lib/compose/logo';
+import { resolveShort, looksLikeShortCode } from '@/lib/shortlink';
+
+async function slugFor(seg: string): Promise<string | null> {
+  if (looksLikeShortCode(seg)) return resolveShort(seg);
+  return seg;
+}
 
 // The Instant Brand Site — a deployed one-page landing site wearing the
 // generated brand. Same slug as the board: /b/<slug> is the brand system,
@@ -10,8 +16,10 @@ import { logoSet } from '@/lib/compose/logo';
 type PageProps = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { slug } = await params;
+  const { slug: seg } = await params;
   try {
+    const slug = await slugFor(seg);
+    if (!slug) return { title: 'Brand Site' };
     const { brief } = decodeBoard(slug);
     return { title: `${brief.businessName} — ${brief.tagline}` };
   } catch {
@@ -20,7 +28,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function SitePage({ params }: PageProps) {
-  const { slug } = await params;
+  const { slug: seg } = await params;
+  const slug = await slugFor(seg);
+  if (!slug) notFound();
   let data;
   try {
     data = decodeBoard(slug);

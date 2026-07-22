@@ -17,6 +17,7 @@ import { issueRerollToken, isValidRerollToken } from './reroll';
 import { publicOrigin } from './origin';
 import { isReplay, markFulfilled } from './replay-guard';
 import { parseEip3009, settleEip3009 } from './eip3009';
+import { shorten } from './shortlink';
 import {
   paymentMode, buildPaymentRequiredHeader, parsePaymentHeader, verifyPayment,
   settlePayment, buildPaymentResponseHeader, SERVICES, type ServiceId,
@@ -131,11 +132,14 @@ async function generate(
     ]);
     const slug = encodeBoard(conceptSet, site);
     const origin = publicOrigin(req);
+    // Short link if Redis is up; otherwise fall back to the self-contained slug.
+    const short = await shorten(slug);
+    const ref = short ?? slug;
 
     return NextResponse.json(
       {
-        board_url: `${origin}/b/${slug}`,
-        ...(site ? { site_url: `${origin}/s/${slug}` } : {}),
+        board_url: `${origin}/b/${ref}`,
+        ...(site ? { site_url: `${origin}/s/${ref}` } : {}),
         business_name: brief.businessName,
         tagline: brief.tagline,
         concepts: conceptSet.concepts.map((c) => c.label),

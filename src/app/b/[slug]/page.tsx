@@ -4,6 +4,15 @@ import { decodeBoard } from '@/lib/encode';
 import { logoSet } from '@/lib/compose/logo';
 import { designTokensJson, brandMarkdown } from '@/lib/compose/tokens';
 import type { Concept } from '@/lib/concepts';
+import { resolveShort, looksLikeShortCode } from '@/lib/shortlink';
+
+// A path segment is either a short code (resolve via Redis) or the long
+// self-contained slug (decode directly). Short codes never fall through to a
+// long-slug decode, so a bad code correctly 404s.
+async function slugFor(seg: string): Promise<string | null> {
+  if (looksLikeShortCode(seg)) return resolveShort(seg);
+  return seg;
+}
 
 function googleFontsHref(concepts: Concept[]): string {
   const families = new Set<string>();
@@ -17,8 +26,10 @@ function googleFontsHref(concepts: Concept[]): string {
 type PageProps = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { slug } = await params;
+  const { slug: seg } = await params;
   try {
+    const slug = await slugFor(seg);
+    if (!slug) return { title: 'Brand Kit by BrandForge' };
     const { brief } = decodeBoard(slug);
     return { title: `${brief.businessName} — Brand Kit by BrandForge`, description: brief.tagline };
   } catch {
@@ -27,7 +38,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function BoardPage({ params }: PageProps) {
-  const { slug } = await params;
+  const { slug: seg } = await params;
+  const slug = await slugFor(seg);
+  if (!slug) notFound();
   let data;
   try {
     data = decodeBoard(slug);
